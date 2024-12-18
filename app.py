@@ -160,7 +160,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
                 cur_out = cur_out[len(final) + 1:]
                 out.append(final)
                 await context.bot.edit_message_text(text=f"```\n{final}\n```", chat_id=update.effective_chat.id, message_id=msg.message_id, parse_mode=ParseMode.MARKDOWN)
-                msg = await context.bot.send_message(text=f"```\n{cur_out.strip()}\n...\n```", chat_id=update.effective_chat.id)
+                msg = await context.bot.send_message(text=f"```\n{cur_out.strip()}\n...\n```", chat_id=update.effective_chat.id, parse_mode=ParseMode.MARKDOWN)
         await context.bot.edit_message_text(text=f"```\n{cur_out}\n```", chat_id=update.effective_chat.id, message_id=msg.message_id, parse_mode=ParseMode.MARKDOWN)
         os.close(mo)
         out.append(cur_out)
