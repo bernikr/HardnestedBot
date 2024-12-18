@@ -36,12 +36,11 @@ class TokenRemoverFormatter(logging.Formatter):
 
 
 logging.basicConfig(
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     level=logging.INFO,
 )
 
 for handler in logging.root.handlers:
-    handler.setFormatter(TokenRemoverFormatter())
+    handler.setFormatter(TokenRemoverFormatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s"))
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
