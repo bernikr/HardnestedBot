@@ -23,10 +23,25 @@ load_dotenv()
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 WHITELISTED_CHAT_IDS = [int(chat_id) for chat_id in os.getenv("WHITELISTED_CHAT_IDS", "0").split(",")]
 
+
+class TokenRemoverFormatter(logging.Formatter):
+    """Formatter that removes sensitive information in urls."""
+    @staticmethod
+    def _filter(s):
+        return s.replace(TELEGRAM_TOKEN, "_TOKEN_")
+
+    def format(self, record):
+        original = logging.Formatter.format(self, record)
+        return self._filter(original)
+
+
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     level=logging.INFO,
 )
+
+for handler in logging.root.handlers:
+    handler.setFormatter(TokenRemoverFormatter())
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
