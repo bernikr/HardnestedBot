@@ -1,0 +1,6 @@
+services:
+  hardnestedbot:
+    build: .
+    env_file: .env
+    volumes:
+      - ./data.pickle:/app/data.pickle
