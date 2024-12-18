@@ -122,7 +122,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 if __name__ == "__main__":
     application = (ApplicationBuilder()
                    .token(TELEGRAM_TOKEN)
-                   .persistence(PicklePersistence("data.pickle"))
+                   .persistence(PicklePersistence("persistence/data.pickle"))
                    .build())
 
     application.add_handler(CommandHandler("start", start))

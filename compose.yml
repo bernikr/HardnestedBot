@@ -3,4 +3,6 @@ services:
     build: .
     env_file: .env
     volumes:
-      - ./data.pickle:/app/data.pickle
+      - persistence:/app/persistence
+volumes:
+  persistence:
