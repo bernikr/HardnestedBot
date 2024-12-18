@@ -106,13 +106,14 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         reply_markup = InlineKeyboardMarkup(keyboard)
         await context.bot.send_message(chat_id=update.effective_chat.id, text="Already running; please wait", reply_markup=reply_markup)
         return
-    context.chat_data["running"].add(cuid)
 
     if "logs" not in context.chat_data:
         context.chat_data["logs"] = dict()
     if cuid not in context.chat_data["logs"]:
         await context.bot.send_message(chat_id=update.effective_chat.id, text="No logs found for this chat; please resend file")
         return
+
+    context.chat_data["running"].add(cuid)
     msg = await context.bot.send_message(chat_id=update.effective_chat.id, text="Decoding logs for cuid " + cuid)
     with NamedTemporaryFile(mode="w", delete=False) as f:
         for line in sorted(context.chat_data["logs"][cuid]):
