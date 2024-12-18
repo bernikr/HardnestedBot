@@ -1,0 +1,26 @@
+[project]
+name = "hardnestedbot"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "python-dotenv>=1.0.1",
+    "python-telegram-bot>=21.9",
+]
+
+[tool.uv]
+dev-dependencies = [
+    "ruff>=0.8.3",
+]
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint]
+preview = true
+select = ["ALL"]
+ignore = [
+    "D", # pydocstyle
+    "CPY", # flake8-copyright
+]
