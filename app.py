@@ -35,10 +35,12 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         await context.bot.send_message(chat_id=update.effective_chat.id, text="Hello, I am HardnestedBot")
 
+
 async def reset(update: Update, context: ContextTypes.DEFAULT_TYPE):
     for k in list(context.chat_data):
         del context.chat_data[k]
     await context.bot.send_message(chat_id=update.effective_chat.id, text="Reset chat data")
+
 
 async def new_file(update: Update, context: ContextTypes.DEFAULT_TYPE):
     file = await context.bot.get_file(update.message.document)
@@ -112,7 +114,8 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             if len(cur_out) < 4000 and new_msg <= 0:  # over 4000 characters, send a new message
                 await context.bot.edit_message_text(text=f"```\n{cur_out.strip()}\n...\n```", chat_id=update.effective_chat.id, message_id=msg.message_id, parse_mode=ParseMode.MARKDOWN)
             else:
-                final = cur_out[:min(4000, new_msg)].rsplit("\n", 1)[0]
+                cutoff = 4000 if new_msg <= 0 else new_msg
+                final = cur_out[:cutoff].rsplit("\n", 1)[0]
                 cur_out = cur_out[len(final) + 1:]
                 out.append(final)
                 await context.bot.edit_message_text(text=f"```\n{final}\n```", chat_id=update.effective_chat.id, message_id=msg.message_id, parse_mode=ParseMode.MARKDOWN)
