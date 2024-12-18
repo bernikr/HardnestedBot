@@ -38,6 +38,7 @@ class TokenRemoverFormatter(logging.Formatter):
 logging.basicConfig(
     level=logging.INFO,
 )
+log = logging.getLogger(__name__)
 
 for handler in logging.root.handlers:
     handler.setFormatter(TokenRemoverFormatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s"))
@@ -119,7 +120,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         f.flush()
         f.close()
 
-        logging.info(f"Decoding logs for tag {cuid} in file {f.name}")
+        log.info(f"Decoding logs for tag {cuid} in file {f.name}")
         # this section uses really hacky file descriptor stuff to get the live preview working
         # for some reason normal pipes don't work with the hardnested utility
         mo, so = os.openpty()
@@ -164,7 +165,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         out.append(cur_out)
         out = "\n".join(out)
         keys = set(re.findall(r"Key found for UID: [0-9a-f]+, Sector: \d+, Key type: [AB]: ([0-9a-f]+)", out))
-        logging.info(f"Found keys: {keys}")
+        log.info(f"Found keys: {keys}")
         if keys:
             await context.bot.send_message(text=f"Found keys:\n```\n{"\n".join(k.upper() for k in keys)}\n```", chat_id=update.effective_chat.id, parse_mode=ParseMode.MARKDOWN)
             context.chat_data["keys"][cuid] = context.chat_data["keys"].get(cuid, set()) | keys
@@ -172,14 +173,14 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 
 if __name__ == "__main__":
-    application = (ApplicationBuilder()
+    app = (ApplicationBuilder()
                    .token(TELEGRAM_TOKEN)
                    .persistence(PicklePersistence("persistence/data.pickle"))
                    .build())
 
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(CommandHandler("reset", reset))
-    application.add_handler(MessageHandler(filters.Document.FileExtension("log") & filters.Chat(WHITELISTED_CHAT_IDS), new_file))
-    application.add_handler(CallbackQueryHandler(button, block=False))
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("reset", reset))
+    app.add_handler(MessageHandler(filters.Document.FileExtension("log") & filters.Chat(WHITELISTED_CHAT_IDS), new_file))
+    app.add_handler(CallbackQueryHandler(button, block=False))
 
-    application.run_polling()
+    app.run_polling()
