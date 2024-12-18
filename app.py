@@ -94,7 +94,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         keyboard = [[InlineKeyboardButton("Recalculate", callback_data=f"!{cuid}")]]
         reply_markup = InlineKeyboardMarkup(keyboard)
         await context.bot.send_message(chat_id=update.effective_chat.id,
-                                       text=f"Keys found for this cuid:\n```\n{"\n".join(k.upper() for k in keys)}\n```",
+                                       text=f"Keys found for this cuid:\n```\n{"\n".join(keys)}\n```",
                                        parse_mode=ParseMode.MARKDOWN,
                                        reply_markup=reply_markup)
         return
@@ -168,7 +168,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         keys = set(re.findall(r"Key found for UID: [0-9a-f]+, Sector: \d+, Key type: [AB]: ([0-9a-f]+)", out))
         log.info(f"Found keys: {keys}")
         if keys:
-            await context.bot.send_message(text=f"Found keys:\n```\n{"\n".join(k.upper() for k in keys)}\n```", chat_id=update.effective_chat.id, parse_mode=ParseMode.MARKDOWN)
+            await context.bot.send_message(text=f"Found keys:\n```\n{"\n".join(keys)}\n```", chat_id=update.effective_chat.id, parse_mode=ParseMode.MARKDOWN)
             context.chat_data["keys"][cuid] = context.chat_data["keys"].get(cuid, set()) | keys
         context.chat_data["running"].remove(cuid)
 
