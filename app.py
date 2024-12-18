@@ -68,6 +68,19 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
     await query.answer()
     cuid = query.data
+    force = cuid.startswith("!")
+    if force:
+        cuid = cuid[1:]
+
+    if "running" not in context.chat_data:
+        context.chat_data["running"] = set()
+    if not force and cuid in context.chat_data["running"]:
+        keyboard = [[InlineKeyboardButton("Start anyway", callback_data=f"!{cuid}")]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await context.bot.send_message(chat_id=update.effective_chat.id, text="Already running; please wait", reply_markup=reply_markup)
+        return
+    context.chat_data["running"].add(cuid)
+
     if "logs" not in context.chat_data:
         context.chat_data["logs"] = dict()
     if cuid not in context.chat_data["logs"]:
@@ -129,6 +142,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         if keys:
             await context.bot.send_message(text=f"Found keys:\n```\n{"\n".join(k.upper() for k in keys)}\n```", chat_id=update.effective_chat.id, parse_mode=ParseMode.MARKDOWN)
 
+        context.chat_data["running"].remove(cuid)
 
 
 if __name__ == "__main__":
