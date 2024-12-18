@@ -86,6 +86,18 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     force = cuid.startswith("!")
     if force:
         cuid = cuid[1:]
+    if "keys" not in context.chat_data:
+        context.chat_data["keys"] = dict()
+
+    if not force and cuid in context.chat_data["keys"]:
+        keys = context.chat_data["keys"][cuid]
+        keyboard = [[InlineKeyboardButton("Recalculate", callback_data=f"!{cuid}")]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await context.bot.send_message(chat_id=update.effective_chat.id,
+                                       text=f"Keys found for this cuid:\n```\n{"\n".join(k.upper() for k in keys)}\n```",
+                                       parse_mode=ParseMode.MARKDOWN,
+                                       reply_markup=reply_markup)
+        return
 
     if "running" not in context.chat_data:
         context.chat_data["running"] = set()
@@ -156,7 +168,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         logging.info(f"Found keys: {keys}")
         if keys:
             await context.bot.send_message(text=f"Found keys:\n```\n{"\n".join(k.upper() for k in keys)}\n```", chat_id=update.effective_chat.id, parse_mode=ParseMode.MARKDOWN)
-
+            context.chat_data["keys"][cuid] = context.chat_data["keys"].get(cuid, set()) | keys
         context.chat_data["running"].remove(cuid)
 
 
