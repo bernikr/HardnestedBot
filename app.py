@@ -35,6 +35,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         await context.bot.send_message(chat_id=update.effective_chat.id, text="Hello, I am HardnestedBot")
 
+async def reset(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    for k in list(context.chat_data):
+        del context.chat_data[k]
+    await context.bot.send_message(chat_id=update.effective_chat.id, text="Reset chat data")
 
 async def new_file(update: Update, context: ContextTypes.DEFAULT_TYPE):
     file = await context.bot.get_file(update.message.document)
@@ -131,6 +135,7 @@ if __name__ == "__main__":
                    .build())
 
     application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("reset", reset))
     application.add_handler(MessageHandler(filters.Document.FileExtension("log") & filters.Chat(WHITELISTED_CHAT_IDS), new_file))
     application.add_handler(CallbackQueryHandler(button))
 
