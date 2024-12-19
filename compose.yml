@@ -2,6 +2,7 @@ services:
   hardnestedbot:
     build: .
     env_file: .env
+    restart: always
     volumes:
       - persistence:/app/persistence
 volumes:
