@@ -1,10 +1,14 @@
 import asyncio
+import dataclasses
 import errno
 import logging
 import os
 import re
 import subprocess  # noqa: S404: acknowledg possible security implications
-from collections.abc import AsyncIterator, Iterable
+from collections import defaultdict
+from collections.abc import AsyncIterator
+from dataclasses import dataclass, field
+from functools import partial
 from tempfile import NamedTemporaryFile
 
 from dotenv import load_dotenv
@@ -12,9 +16,11 @@ from telegram import Bot, InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.constants import ParseMode
 from telegram.ext import (
     ApplicationBuilder,
+    CallbackContext,
     CallbackQueryHandler,
     CommandHandler,
     ContextTypes,
+    ExtBot,
     MessageHandler,
     PicklePersistence,
     filters,
@@ -23,6 +29,16 @@ from telegram.ext import (
 load_dotenv()
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN", "")
 WHITELISTED_CHAT_IDS = [int(chat_id) for chat_id in os.getenv("WHITELISTED_CHAT_IDS", "0").split(",")]
+
+
+@dataclass
+class ChatData:
+    logs: defaultdict[str, set[str]] = field(default_factory=partial(defaultdict, set))
+    keys: defaultdict[str, set[str]] = field(default_factory=partial(defaultdict, set))
+    running: set[str] = field(default_factory=set)
+
+
+type Context = CallbackContext[ExtBot, dict, ChatData, dict]
 
 
 class TokenRemoverFormatter(logging.Formatter):
@@ -46,7 +62,7 @@ for handler in logging.root.handlers:
     handler.setFormatter(TokenRemoverFormatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s"))
 
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def start(update: Update, context: Context) -> None:
     assert update.effective_chat  # noqa: S101
 
     if update.effective_chat.id not in WHITELISTED_CHAT_IDS:
@@ -58,16 +74,16 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         await context.bot.send_message(chat_id=update.effective_chat.id, text="Hello, I am HardnestedBot")
 
 
-async def reset(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def reset(update: Update, context: Context) -> None:
     assert context.chat_data  # noqa: S101
     assert update.effective_chat  # noqa: S101
 
-    for k in list(context.chat_data):
-        del context.chat_data[k]
+    for k in dataclasses.fields(context.chat_data):
+        setattr(context.chat_data, k.name, k.default_factory() if callable(k.default_factory) else k.default)
     await context.bot.send_message(chat_id=update.effective_chat.id, text="Reset chat data")
 
 
-async def new_file(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def new_file(update: Update, context: Context) -> None:
     assert update.message  # noqa: S101
     assert update.message.document  # noqa: S101
     assert context.chat_data  # noqa: S101
@@ -76,16 +92,11 @@ async def new_file(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     content = await file.download_as_bytearray()
     content = content.decode("utf-8").splitlines()
 
-    if "logs" not in context.chat_data:
-        context.chat_data["logs"] = {}
-
     for line in content:
         cuid = line.split(" ")[5]
-        if cuid not in context.chat_data["logs"]:
-            context.chat_data["logs"][cuid] = set()
-        context.chat_data["logs"][cuid].add(line)
+        context.chat_data.logs[cuid].add(line)
 
-    cuids = list(dict.fromkeys([line.split(" ")[5] for line in content]).keys())
+    cuids = list(dict.fromkeys([line.split(" ")[5] for line in content]).keys())  # dict used as an orderedset
     keyboard = [[InlineKeyboardButton(i.upper(), callback_data=i)] for i in cuids]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await context.bot.send_message(
@@ -95,7 +106,7 @@ async def new_file(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     )
 
 
-async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def button(update: Update, context: Context) -> None:
     assert update.callback_query  # noqa: S101
     assert update.callback_query.data  # noqa: S101
     assert context.chat_data  # noqa: S101
@@ -106,11 +117,9 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     force = cuid.startswith("!")
     if force:
         cuid = cuid[1:]
-    if "keys" not in context.chat_data:
-        context.chat_data["keys"] = {}
 
-    if not force and cuid in context.chat_data["keys"]:
-        keys = context.chat_data["keys"][cuid]
+    if not force and context.chat_data.keys[cuid]:
+        keys = context.chat_data.keys[cuid]
         keyboard = [[InlineKeyboardButton("Recalculate", callback_data=f"!{cuid}")]]
         reply_markup = InlineKeyboardMarkup(keyboard)
         await context.bot.send_message(
@@ -121,9 +130,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         )
         return
 
-    if "running" not in context.chat_data:
-        context.chat_data["running"] = set()
-    if not force and cuid in context.chat_data["running"]:
+    if not force and cuid in context.chat_data.running:
         keyboard = [[InlineKeyboardButton("Start anyway", callback_data=f"!{cuid}")]]
         reply_markup = InlineKeyboardMarkup(keyboard)
         await context.bot.send_message(
@@ -133,28 +140,26 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         )
         return
 
-    if "logs" not in context.chat_data:
-        context.chat_data["logs"] = {}
-    if cuid not in context.chat_data["logs"]:
+    if not context.chat_data.logs[cuid]:
         await context.bot.send_message(
             chat_id=update.effective_chat.id,
             text="No logs found for this chat; please resend file",
         )
         return
 
-    context.chat_data["running"].add(cuid)
-    keys = await run_hardnested(cuid, context.chat_data["logs"][cuid], update.effective_chat.id, context.bot)
+    context.chat_data.running.add(cuid)
+    keys = await run_hardnested(cuid, context.chat_data.logs[cuid], update.effective_chat.id, context.bot)
     if keys:
         await context.bot.send_message(
             text=f"Found keys:\n```\n{"\n".join(k.upper() for k in keys)}\n```",
             chat_id=update.effective_chat.id,
             parse_mode=ParseMode.MARKDOWN,
         )
-        context.chat_data["keys"][cuid] = context.chat_data["keys"].get(cuid, set()) | keys
-    context.chat_data["running"].remove(cuid)
+        context.chat_data.keys[cuid] |= keys
+    context.chat_data.running.remove(cuid)
 
 
-async def run_hardnested(cuid: str, logs: str, chat_id: int, bot: Bot) -> Iterable[str]:
+async def run_hardnested(cuid: str, logs: set[str], chat_id: int, bot: Bot) -> set[str]:
     msg = await bot.send_message(chat_id=chat_id, text="Decoding logs for cuid " + cuid)
     with NamedTemporaryFile(mode="w", delete=False, encoding="utf-8") as f:
         for line in sorted(logs):
@@ -236,7 +241,15 @@ async def run_process(args: str) -> AsyncIterator[str]:
 
 
 if __name__ == "__main__":
-    app = ApplicationBuilder().token(TELEGRAM_TOKEN).persistence(PicklePersistence("persistence/data.pickle")).build()
+    context_types = ContextTypes(chat_data=ChatData)
+
+    app = (
+        ApplicationBuilder()
+        .token(TELEGRAM_TOKEN)
+        .context_types(context_types)
+        .persistence(PicklePersistence("persistence/data.pickle"))
+        .build()
+    )
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("reset", reset))
