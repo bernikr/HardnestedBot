@@ -218,7 +218,7 @@ async def run_process(args: str | Sequence[str]) -> AsyncIterator[str]:
         stdout=so,
         stderr=so,
     )
-    os.close(so)
+    task = asyncio.create_task(proc)
 
     while True:
         await asyncio.sleep(0)
@@ -234,8 +234,9 @@ async def run_process(args: str | Sequence[str]) -> AsyncIterator[str]:
         if not chunk:
             break
         yield chunk.decode("utf-8")
+    await task
+    os.close(so)
     os.close(mo)
-    await proc
 
 
 if __name__ == "__main__":
