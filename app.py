@@ -234,9 +234,10 @@ async def run_process(args: str | Sequence[str]) -> AsyncIterator[str]:
         if not chunk:
             break
         yield chunk.decode("utf-8")
-    await task
+    log.info("done running external process")
     os.close(so)
     os.close(mo)
+    await task
 
 
 if __name__ == "__main__":
