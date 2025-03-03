@@ -38,6 +38,7 @@ name = "hardnestedbot"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
+    { name = "anyio" },
     { name = "python-telegram-bot" },
 ]
 
@@ -47,7 +48,10 @@ dev = [
 ]
 
 [package.metadata]
-requires-dist = [{ name = "python-telegram-bot", specifier = ">=21.9" }]
+requires-dist = [
+    { name = "anyio", specifier = ">=4.7.0" },
+    { name = "python-telegram-bot", specifier = ">=21.9" },
+]
 
 [package.metadata.requires-dev]
 dev = [{ name = "ruff", specifier = ">=0.8.3" }]

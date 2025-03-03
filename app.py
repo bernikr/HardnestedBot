@@ -4,13 +4,13 @@ import errno
 import logging
 import os
 import re
-import subprocess  # noqa: S404: acknowledg possible security implications
 from collections import defaultdict
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Sequence
 from dataclasses import dataclass, field
 from functools import partial
 from tempfile import NamedTemporaryFile
 
+import anyio
 from telegram import Bot, InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.constants import ParseMode
 from telegram.ext import (
@@ -207,17 +207,16 @@ async def run_hardnested(cuid: str, logs: set[str], chat_id: int, bot: Bot) -> s
         return keys
 
 
-async def run_process(args: str) -> AsyncIterator[str]:
+async def run_process(args: str | Sequence[str]) -> AsyncIterator[str]:
     # this section uses really hacky file descriptor stuff to get the live preview working
     # for some reason normal pipes don't work with the hardnested utility
     # only works on unix, errors out on windows (run in docker)
     mo, so = os.openpty()  # pyright: ignore[reportAttributeAccessIssue]
     os.set_blocking(mo, False)
-    subprocess.Popen(
+    proc = anyio.run_process(
         args,
         stdout=so,
         stderr=so,
-        shell=True,
     )
     os.close(so)
 
@@ -236,6 +235,7 @@ async def run_process(args: str) -> AsyncIterator[str]:
             break
         yield chunk.decode("utf-8")
     os.close(mo)
+    await proc
 
 
 if __name__ == "__main__":
