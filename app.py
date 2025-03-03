@@ -51,9 +51,7 @@ class TokenRemoverFormatter(logging.Formatter):
         return self._filter(original)
 
 
-logging.basicConfig(
-    level=logging.INFO,
-)
+logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
 
 for handler in logging.root.handlers:
@@ -88,19 +86,17 @@ async def new_file(update: Update, context: Context) -> None:
 
     file = await context.bot.get_file(update.message.document)
     content = await file.download_as_bytearray()
-    content = content.decode("utf-8").splitlines()
 
-    for line in content:
+    cuids: dict[str, None] = {}  # use dict instead of set to preserve order
+    for line in content.decode("utf-8").splitlines():
         cuid = line.split(" ")[5]
+        cuids[cuid] = None
         context.chat_data.logs[cuid].add(line)
 
-    cuids = list(dict.fromkeys([line.split(" ")[5] for line in content]).keys())  # dict used as an orderedset
-    keyboard = [[InlineKeyboardButton(i.upper(), callback_data=i)] for i in cuids]
-    reply_markup = InlineKeyboardMarkup(keyboard)
     await context.bot.send_message(
         chat_id=update.message.chat_id,
         text="Select id to decode:",
-        reply_markup=reply_markup,
+        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton(i.upper(), callback_data=i)] for i in cuids]),
     )
 
 
@@ -118,23 +114,19 @@ async def button(update: Update, context: Context) -> None:
 
     if not force and context.chat_data.keys[cuid]:
         keys = context.chat_data.keys[cuid]
-        keyboard = [[InlineKeyboardButton("Recalculate", callback_data=f"!{cuid}")]]
-        reply_markup = InlineKeyboardMarkup(keyboard)
         await context.bot.send_message(
             chat_id=update.effective_chat.id,
             text=f"```\n{"\n".join(k.upper() for k in keys)}\n```",
             parse_mode=ParseMode.MARKDOWN,
-            reply_markup=reply_markup,
+            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Recalculate", callback_data=f"!{cuid}")]]),
         )
         return
 
     if not force and cuid in context.chat_data.running:
-        keyboard = [[InlineKeyboardButton("Start anyway", callback_data=f"!{cuid}")]]
-        reply_markup = InlineKeyboardMarkup(keyboard)
         await context.bot.send_message(
             chat_id=update.effective_chat.id,
             text="Already running; please wait",
-            reply_markup=reply_markup,
+            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Start anyway", callback_data=f"!{cuid}")]]),
         )
         return
 
@@ -146,8 +138,10 @@ async def button(update: Update, context: Context) -> None:
         return
 
     context.chat_data.running.add(cuid)
-    keys = await run_hardnested(cuid, context.chat_data.logs[cuid], update.effective_chat.id, context.bot)
-    context.chat_data.running.remove(cuid)
+    try:
+        keys = await run_hardnested(cuid, context.chat_data.logs[cuid], update.effective_chat.id, context.bot)
+    finally:
+        context.chat_data.running.remove(cuid)
     if keys:
         context.chat_data.keys[cuid] |= keys
         await context.bot.send_message(
@@ -173,10 +167,11 @@ async def run_hardnested(cuid: str, logs: set[str], chat_id: int, bot: Bot) -> s
         log.info("Decoding logs for tag %s in file %s", cuid, f.name)
         cur_out = ""
         out = []
-        async for chunk in run_process(f"./HardnestedRecovery/hardnested_main {f.name}"):
+        async for chunk in run_process(["./HardnestedRecovery/hardnested_main", f.name]):
             cur_out += chunk
             new_msg = cur_out.rfind("[=] Hardnested attack starting...")
-            if len(cur_out) < 4000 and new_msg <= 0:  # noqa: PLR2004: over 4000 characters, send a new message
+            max_msg_len = 4000
+            if len(cur_out) < max_msg_len and new_msg <= 0:
                 await bot.edit_message_text(
                     text=f"```\n{cur_out.strip()}\n...\n```",
                     chat_id=chat_id,
@@ -184,7 +179,7 @@ async def run_hardnested(cuid: str, logs: set[str], chat_id: int, bot: Bot) -> s
                     parse_mode=ParseMode.MARKDOWN,
                 )
             else:
-                cutoff = 4000 if new_msg <= 0 else new_msg
+                cutoff = max_msg_len if new_msg <= 0 else new_msg
                 final = cur_out[:cutoff].rsplit("\n", 1)[0]
                 cur_out = cur_out[len(final) + 1 :]
                 out.append(final)
@@ -243,12 +238,10 @@ async def run_process(args: str | Sequence[str]) -> AsyncIterator[str]:
 
 
 if __name__ == "__main__":
-    context_types = ContextTypes(chat_data=ChatData)
-
     app = (
         ApplicationBuilder()
         .token(TELEGRAM_TOKEN)
-        .context_types(context_types)
+        .context_types(ContextTypes(chat_data=ChatData))
         .persistence(PicklePersistence("persistence/data.pickle"))
         .build()
     )
@@ -258,6 +251,6 @@ if __name__ == "__main__":
     app.add_handler(
         MessageHandler(filters.Document.FileExtension("log") & filters.Chat(WHITELISTED_CHAT_IDS), new_file),
     )
-    app.add_handler(CallbackQueryHandler(button, block=False))
+    app.add_handler(CallbackQueryHandler(button, block=True))
 
     app.run_polling()
