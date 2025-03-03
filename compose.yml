@@ -4,6 +4,6 @@ services:
     env_file: .env
     restart: always
     volumes:
-      - persistence:/app/persistence
-volumes:
-  persistence:
+      - ./data:/app/persistence
+    labels:
+      com.centurylinklabs.watchtower.enable: false
