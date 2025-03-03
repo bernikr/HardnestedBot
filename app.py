@@ -11,7 +11,6 @@ from dataclasses import dataclass, field
 from functools import partial
 from tempfile import NamedTemporaryFile
 
-from dotenv import load_dotenv
 from telegram import Bot, InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.constants import ParseMode
 from telegram.ext import (
@@ -26,7 +25,6 @@ from telegram.ext import (
     filters,
 )
 
-load_dotenv()
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN", "")
 WHITELISTED_CHAT_IDS = [int(chat_id) for chat_id in os.getenv("WHITELISTED_CHAT_IDS", "0").split(",")]
 
