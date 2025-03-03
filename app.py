@@ -122,7 +122,7 @@ async def button(update: Update, context: Context) -> None:
         reply_markup = InlineKeyboardMarkup(keyboard)
         await context.bot.send_message(
             chat_id=update.effective_chat.id,
-            text=f"Keys found for this cuid:\n```\n{"\n".join(k.upper() for k in keys)}\n```",
+            text=f"```\n{"\n".join(k.upper() for k in keys)}\n```",
             parse_mode=ParseMode.MARKDOWN,
             reply_markup=reply_markup,
         )
@@ -147,14 +147,19 @@ async def button(update: Update, context: Context) -> None:
 
     context.chat_data.running.add(cuid)
     keys = await run_hardnested(cuid, context.chat_data.logs[cuid], update.effective_chat.id, context.bot)
+    context.chat_data.running.remove(cuid)
     if keys:
+        context.chat_data.keys[cuid] |= keys
         await context.bot.send_message(
-            text=f"Found keys:\n```\n{"\n".join(k.upper() for k in keys)}\n```",
+            text=f"```\n{"\n".join(k.upper() for k in keys)}\n```",
             chat_id=update.effective_chat.id,
             parse_mode=ParseMode.MARKDOWN,
         )
-        context.chat_data.keys[cuid] |= keys
-    context.chat_data.running.remove(cuid)
+    else:
+        await context.bot.send_message(
+            text="No new keys found",
+            chat_id=update.effective_chat.id,
+        )
 
 
 async def run_hardnested(cuid: str, logs: set[str], chat_id: int, bot: Bot) -> set[str]:
