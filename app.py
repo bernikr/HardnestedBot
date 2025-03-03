@@ -4,7 +4,7 @@ import logging
 import os
 import re
 import subprocess  # noqa: S404: acknowledg possible security implications
-from collections.abc import Iterable
+from collections.abc import AsyncIterator, Iterable
 from tempfile import NamedTemporaryFile
 
 from dotenv import load_dotenv
@@ -115,7 +115,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         reply_markup = InlineKeyboardMarkup(keyboard)
         await context.bot.send_message(
             chat_id=update.effective_chat.id,
-            text=f"Keys found for this cuid:\n```\n{"\n".join(keys)}\n```",
+            text=f"Keys found for this cuid:\n```\n{"\n".join(k.upper() for k in keys)}\n```",
             parse_mode=ParseMode.MARKDOWN,
             reply_markup=reply_markup,
         )
@@ -146,7 +146,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     keys = await run_hardnested(cuid, context.chat_data["logs"][cuid], update.effective_chat.id, context.bot)
     if keys:
         await context.bot.send_message(
-            text=f"Found keys:\n```\n{"\n".join(keys)}\n```",
+            text=f"Found keys:\n```\n{"\n".join(k.upper() for k in keys)}\n```",
             chat_id=update.effective_chat.id,
             parse_mode=ParseMode.MARKDOWN,
         )
@@ -163,36 +163,10 @@ async def run_hardnested(cuid: str, logs: str, chat_id: int, bot: Bot) -> Iterab
         f.close()
 
         log.info("Decoding logs for tag %s in file %s", cuid, f.name)
-        # this section uses really hacky file descriptor stuff to get the live preview working
-        # for some reason normal pipes don't work with the hardnested utility
-        # only works on unix, errors out on windows (run in docker)
-        mo, so = os.openpty()  # pyright: ignore[reportAttributeAccessIssue]
-        os.set_blocking(mo, False)
-        subprocess.Popen(
-            # socat tricks the program into thinking it's in a tty
-            f"./HardnestedRecovery/hardnested_main {f.name}",
-            stdout=so,
-            stderr=so,
-            shell=True,
-        )
-        os.close(so)
         cur_out = ""
         out = []
-        while True:
-            await asyncio.sleep(0)
-            try:
-                chunk = os.read(mo, 256)
-            except BlockingIOError:
-                await asyncio.sleep(1)
-                continue
-            except OSError as e:
-                if e.errno == errno.EIO:
-                    break
-                raise
-            if not chunk:
-                break
-
-            cur_out += chunk.decode("utf-8")
+        async for chunk in run_process(f"./HardnestedRecovery/hardnested_main {f.name}"):
+            cur_out += chunk
             new_msg = cur_out.rfind("[=] Hardnested attack starting...")
             if len(cur_out) < 4000 and new_msg <= 0:  # noqa: PLR2004: over 4000 characters, send a new message
                 await bot.edit_message_text(
@@ -223,12 +197,42 @@ async def run_hardnested(cuid: str, logs: str, chat_id: int, bot: Bot) -> Iterab
             message_id=msg.message_id,
             parse_mode=ParseMode.MARKDOWN,
         )
-        os.close(mo)
         out.append(cur_out)
         out = "\n".join(out)
         keys = set(re.findall(r"Key found for UID: [0-9a-f]+, Sector: \d+, Key type: [AB]: ([0-9a-f]+)", out))
         log.info("Found keys: %s", keys)
         return keys
+
+
+async def run_process(args: str) -> AsyncIterator[str]:
+    # this section uses really hacky file descriptor stuff to get the live preview working
+    # for some reason normal pipes don't work with the hardnested utility
+    # only works on unix, errors out on windows (run in docker)
+    mo, so = os.openpty()  # pyright: ignore[reportAttributeAccessIssue]
+    os.set_blocking(mo, False)
+    subprocess.Popen(
+        args,
+        stdout=so,
+        stderr=so,
+        shell=True,
+    )
+    os.close(so)
+
+    while True:
+        await asyncio.sleep(0)
+        try:
+            chunk = os.read(mo, 256)
+        except BlockingIOError:
+            await asyncio.sleep(1)
+            continue
+        except OSError as e:
+            if e.errno == errno.EIO:
+                break
+            raise
+        if not chunk:
+            break
+        yield chunk.decode("utf-8")
+    os.close(mo)
 
 
 if __name__ == "__main__":
