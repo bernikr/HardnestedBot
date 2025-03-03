@@ -4,10 +4,11 @@ import logging
 import os
 import re
 import subprocess  # noqa: S404: acknowledg possible security implications
+from collections.abc import Iterable
 from tempfile import NamedTemporaryFile
 
 from dotenv import load_dotenv
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
+from telegram import Bot, InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.constants import ParseMode
 from telegram.ext import (
     ApplicationBuilder,
@@ -142,9 +143,21 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         return
 
     context.chat_data["running"].add(cuid)
-    msg = await context.bot.send_message(chat_id=update.effective_chat.id, text="Decoding logs for cuid " + cuid)
+    keys = await run_hardnested(cuid, context.chat_data["logs"][cuid], update.effective_chat.id, context.bot)
+    if keys:
+        await context.bot.send_message(
+            text=f"Found keys:\n```\n{"\n".join(keys)}\n```",
+            chat_id=update.effective_chat.id,
+            parse_mode=ParseMode.MARKDOWN,
+        )
+        context.chat_data["keys"][cuid] = context.chat_data["keys"].get(cuid, set()) | keys
+    context.chat_data["running"].remove(cuid)
+
+
+async def run_hardnested(cuid: str, logs: str, chat_id: int, bot: Bot) -> Iterable[str]:
+    msg = await bot.send_message(chat_id=chat_id, text="Decoding logs for cuid " + cuid)
     with NamedTemporaryFile(mode="w", delete=False, encoding="utf-8") as f:
-        for line in sorted(context.chat_data["logs"][cuid]):
+        for line in sorted(logs):
             f.write(line + "\n")
         f.flush()
         f.close()
@@ -182,9 +195,9 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             cur_out += chunk.decode("utf-8")
             new_msg = cur_out.rfind("[=] Hardnested attack starting...")
             if len(cur_out) < 4000 and new_msg <= 0:  # noqa: PLR2004: over 4000 characters, send a new message
-                await context.bot.edit_message_text(
+                await bot.edit_message_text(
                     text=f"```\n{cur_out.strip()}\n...\n```",
-                    chat_id=update.effective_chat.id,
+                    chat_id=chat_id,
                     message_id=msg.message_id,
                     parse_mode=ParseMode.MARKDOWN,
                 )
@@ -193,20 +206,20 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
                 final = cur_out[:cutoff].rsplit("\n", 1)[0]
                 cur_out = cur_out[len(final) + 1 :]
                 out.append(final)
-                await context.bot.edit_message_text(
+                await bot.edit_message_text(
                     text=f"```\n{final}\n```",
-                    chat_id=update.effective_chat.id,
+                    chat_id=chat_id,
                     message_id=msg.message_id,
                     parse_mode=ParseMode.MARKDOWN,
                 )
-                msg = await context.bot.send_message(
+                msg = await bot.send_message(
                     text=f"```\n{cur_out.strip()}\n...\n```",
-                    chat_id=update.effective_chat.id,
+                    chat_id=chat_id,
                     parse_mode=ParseMode.MARKDOWN,
                 )
-        await context.bot.edit_message_text(
+        await bot.edit_message_text(
             text=f"```\n{cur_out}\n```",
-            chat_id=update.effective_chat.id,
+            chat_id=chat_id,
             message_id=msg.message_id,
             parse_mode=ParseMode.MARKDOWN,
         )
@@ -215,14 +228,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         out = "\n".join(out)
         keys = set(re.findall(r"Key found for UID: [0-9a-f]+, Sector: \d+, Key type: [AB]: ([0-9a-f]+)", out))
         log.info("Found keys: %s", keys)
-        if keys:
-            await context.bot.send_message(
-                text=f"Found keys:\n```\n{"\n".join(keys)}\n```",
-                chat_id=update.effective_chat.id,
-                parse_mode=ParseMode.MARKDOWN,
-            )
-            context.chat_data["keys"][cuid] = context.chat_data["keys"].get(cuid, set()) | keys
-        context.chat_data["running"].remove(cuid)
+        return keys
 
 
 if __name__ == "__main__":
