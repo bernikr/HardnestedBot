@@ -213,12 +213,12 @@ async def run_process(args: str | Sequence[str]) -> AsyncIterator[str]:
     # only works on unix, errors out on windows (run in docker)
     mo, so = os.openpty()  # pyright: ignore[reportAttributeAccessIssue]
     os.set_blocking(mo, False)
-    proc = anyio.run_process(
+    proc = await anyio.open_process(
         args,
         stdout=so,
         stderr=so,
     )
-    task = asyncio.create_task(proc)
+    os.close(so)
 
     while True:
         await asyncio.sleep(0)
@@ -231,13 +231,10 @@ async def run_process(args: str | Sequence[str]) -> AsyncIterator[str]:
             if e.errno == errno.EIO:
                 break
             raise
-        if not chunk:
-            break
         yield chunk.decode("utf-8")
-    log.info("done running external process")
-    os.close(so)
     os.close(mo)
-    await task
+    exit_code = await proc.wait()
+    log.info("external process finished with exit code %s", exit_code)
 
 
 if __name__ == "__main__":

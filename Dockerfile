@@ -5,7 +5,7 @@ FROM ghcr.io/astral-sh/uv:bookworm-slim
 WORKDIR /app
 
 # Build HardnestedRecovery
-RUN apt update; apt install -y build-essential liblzma-dev git socat
+RUN apt update; apt install -y build-essential liblzma-dev git
 RUN git clone https://github.com/noproto/HardnestedRecovery.git
 RUN cd HardnestedRecovery; make; cd ..
 
