@@ -11,7 +11,9 @@ dependencies = [
 
 [tool.uv]
 dev-dependencies = [
+    "gitpython>=3.1.44",
     "ruff>=0.8.3",
+    "semver>=3.0.4",
 ]
 
 [tool.ruff]
