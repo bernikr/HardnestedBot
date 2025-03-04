@@ -1,9 +1,0 @@
-services:
-  hardnestedbot:
-    build: .
-    env_file: .env
-    restart: always
-    volumes:
-      - ./data:/app/persistence
-    labels:
-      com.centurylinklabs.watchtower.enable: false

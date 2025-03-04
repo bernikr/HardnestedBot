@@ -1,20 +1,13 @@
 [project]
 name = "hardnestedbot"
 version = "0.1.1"
-description = "Add your description here"
+description = "Telegram bot for Flipper Hardnested Recovery on the go "
 readme = "README.md"
 requires-python = ">=3.13"
-dependencies = [
-    "anyio>=4.7.0",
-    "python-telegram-bot[ext]>=21.9",
-]
+dependencies = ["anyio>=4.7.0", "python-telegram-bot[ext]>=21.9"]
 
 [tool.uv]
-dev-dependencies = [
-    "gitpython>=3.1.44",
-    "ruff>=0.8.3",
-    "semver>=3.0.4",
-]
+dev-dependencies = ["gitpython>=3.1.44", "ruff>=0.8.3", "semver>=3.0.4"]
 
 [tool.ruff]
 line-length = 120
@@ -23,6 +16,6 @@ line-length = 120
 preview = true
 select = ["ALL"]
 ignore = [
-    "D", # pydocstyle
+    "D",   # pydocstyle
     "CPY", # flake8-copyright
 ]

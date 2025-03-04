@@ -11,6 +11,7 @@ MAIN_BRANCH = "main"
 VERSION_OCCURANCES = [
     ("pyproject.toml", r'(version = ")(\S+)(")', 1),
     ("app.py", r'(VERSION = ")(\S+)(")', 1),
+    ("README.md", r"(image: ghcr.io/bernikr/hardnestedbot:)(\S+)()", 1),
 ]
 
 versions = set()
