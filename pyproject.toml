@@ -6,7 +6,7 @@ readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "anyio>=4.7.0",
-    "python-telegram-bot>=21.9",
+    "python-telegram-bot[ext]>=21.9",
 ]
 
 [tool.uv]

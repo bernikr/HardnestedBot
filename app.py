@@ -4,6 +4,7 @@ import errno
 import logging
 import os
 import re
+import secrets
 from collections import defaultdict
 from collections.abc import AsyncIterator, Sequence
 from dataclasses import dataclass, field
@@ -27,6 +28,8 @@ from telegram.ext import (
 
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN", "")
 WHITELISTED_CHAT_IDS = [int(chat_id) for chat_id in os.getenv("WHITELISTED_CHAT_IDS", "0").split(",")]
+WEBHOOK_URL = os.getenv("WEBHOOK_URL")
+WEBHOOK_PORT = int(os.getenv("WEBHOOK_PORT", "8080"))
 
 
 @dataclass
@@ -253,4 +256,12 @@ if __name__ == "__main__":
     )
     app.add_handler(CallbackQueryHandler(button, block=True))
 
-    app.run_polling()
+    if WEBHOOK_URL:
+        app.run_webhook(
+            webhook_url=WEBHOOK_URL,
+            port=WEBHOOK_PORT,
+            listen="0.0.0.0",  # noqa: S104
+            secret_token=secrets.token_urlsafe(),
+        )
+    else:
+        app.run_polling()
