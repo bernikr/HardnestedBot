@@ -31,6 +31,8 @@ WHITELISTED_CHAT_IDS = [int(chat_id) for chat_id in os.getenv("WHITELISTED_CHAT_
 WEBHOOK_URL = os.getenv("WEBHOOK_URL")
 WEBHOOK_PORT = int(os.getenv("WEBHOOK_PORT", "8080"))
 
+VERSION = "0.1.1"
+
 
 @dataclass
 class ChatData:
@@ -119,7 +121,7 @@ async def button(update: Update, context: Context) -> None:
         keys = context.chat_data.keys[cuid]
         await context.bot.send_message(
             chat_id=update.effective_chat.id,
-            text=f"```\n{"\n".join(k.upper() for k in keys)}\n```",
+            text=f"```\n{'\n'.join(k.upper() for k in keys)}\n```",
             parse_mode=ParseMode.MARKDOWN,
             reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Recalculate", callback_data=f"!{cuid}")]]),
         )
@@ -148,7 +150,7 @@ async def button(update: Update, context: Context) -> None:
     if keys:
         context.chat_data.keys[cuid] |= keys
         await context.bot.send_message(
-            text=f"```\n{"\n".join(k.upper() for k in keys)}\n```",
+            text=f"```\n{'\n'.join(k.upper() for k in keys)}\n```",
             chat_id=update.effective_chat.id,
             parse_mode=ParseMode.MARKDOWN,
         )
@@ -246,13 +248,15 @@ async def all_keys(update: Update, context: Context) -> None:
 
     keys = {k for ks in context.chat_data.keys.values() for k in ks}
     await context.bot.send_message(
-        text=f"```\n{"\n".join(k.upper() for k in keys)}\n```",
+        text=f"```\n{'\n'.join(k.upper() for k in keys)}\n```",
         chat_id=update.effective_chat.id,
         parse_mode=ParseMode.MARKDOWN,
     )
 
 
 if __name__ == "__main__":
+    log.info("HardnestedBot version %s", VERSION)
+
     app = (
         ApplicationBuilder()
         .token(TELEGRAM_TOKEN)

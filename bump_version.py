@@ -10,6 +10,7 @@ MAIN_BRANCH = "main"
 
 VERSION_OCCURANCES = [
     ("pyproject.toml", r'(version = ")(\S+)(")', 1),
+    ("app.py", r'(VERSION = ")(\S+)(")', 1),
 ]
 
 versions = set()
