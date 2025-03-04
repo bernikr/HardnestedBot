@@ -161,7 +161,7 @@ async def button(update: Update, context: Context) -> None:
 
 async def run_hardnested(cuid: str, logs: set[str], chat_id: int, bot: Bot) -> set[str]:
     msg = await bot.send_message(chat_id=chat_id, text="Decoding logs for cuid " + cuid)
-    with NamedTemporaryFile(mode="w", delete=False, encoding="utf-8") as f:
+    with NamedTemporaryFile(mode="w", delete_on_close=False, encoding="utf-8") as f:
         for line in sorted(logs):
             f.write(line + "\n")
         f.flush()
