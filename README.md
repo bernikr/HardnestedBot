@@ -11,7 +11,7 @@ services:
     image: ghcr.io/bernikr/hardnestedbot:0.1.1
     restart: always
     volumes:
-      - data:/app/persistence
+      - data:/app/data
     environment:
       TELEGRAM_TOKEN: <your telegram token>
       WHITELISTED_CHAT_IDS: <your telegram chat id>

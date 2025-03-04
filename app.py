@@ -261,7 +261,7 @@ if __name__ == "__main__":
         ApplicationBuilder()
         .token(TELEGRAM_TOKEN)
         .context_types(ContextTypes(chat_data=ChatData))
-        .persistence(PicklePersistence("persistence/data.pickle"))
+        .persistence(PicklePersistence("data/data.pickle"))
         .build()
     )
 

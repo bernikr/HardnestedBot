@@ -10,5 +10,5 @@ wheels/
 .venv
 
 /.env
-/.idea/
 /compose.yml
+/data
