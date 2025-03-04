@@ -25,10 +25,10 @@ volumes:
 All of this projects features are configured through environment variables:
 | Variable | Default | Description |
 | --- | --- | --- |
-| TELEGRAM_TOKEN | *required* | Telegram bot token (can be obtained from [@BotFather](https://t.me/BotFather)) |
-| WHITELISTED_CHAT_IDS | *required* | Comma separated list of chat ids to whitelist (You can use [@userinfobot](https://t.me/userinfobot) to get your chat id) |
-| WEBHOOK_URL | `` | Set URL to use webhooks instead of polling |
-| WEBHOOK_PORT | 8080 | Port to run the webhook on |
+| `TELEGRAM_TOKEN` | *required* | Telegram bot token (can be obtained from [@BotFather](https://t.me/BotFather)) |
+| `WHITELISTED_CHAT_IDS` | *required* | Comma separated list of chat ids to whitelist (You can use [@userinfobot](https://t.me/userinfobot) to get your chat id) |
+| `WEBHOOK_URL` |  | Set URL to use webhooks instead of polling |
+| `WEBHOOK_PORT` | 8080 | Port to run the webhook on |
 
 ## Usage
 
