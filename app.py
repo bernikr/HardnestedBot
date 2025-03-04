@@ -240,6 +240,18 @@ async def run_process(args: str | Sequence[str]) -> AsyncIterator[str]:
     log.info("external process finished with exit code %s", exit_code)
 
 
+async def all_keys(update: Update, context: Context) -> None:
+    assert context.chat_data  # noqa: S101
+    assert update.effective_chat  # noqa: S101
+
+    keys = {k for ks in context.chat_data.keys.values() for k in ks}
+    await context.bot.send_message(
+        text=f"```\n{"\n".join(k.upper() for k in keys)}\n```",
+        chat_id=update.effective_chat.id,
+        parse_mode=ParseMode.MARKDOWN,
+    )
+
+
 if __name__ == "__main__":
     app = (
         ApplicationBuilder()
@@ -251,6 +263,7 @@ if __name__ == "__main__":
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("reset", reset))
+    app.add_handler(CommandHandler("keys", all_keys))
     app.add_handler(
         MessageHandler(filters.Document.FileExtension("log") & filters.Chat(WHITELISTED_CHAT_IDS), new_file),
     )
