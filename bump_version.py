@@ -1,5 +1,6 @@
 # ruff: noqa: T201
 
+import os
 import re
 from pathlib import Path
 
@@ -13,6 +14,7 @@ VERSION_OCCURANCES = [
     ("app.py", r'(VERSION = ")(\S+)(")', 1),
     ("README.md", r"(image: ghcr.io/bernikr/hardnestedbot:)(\S+)()", 1),
 ]
+UPDATE_LOCKFILE = True
 
 versions = set()
 has_wanings = False
@@ -79,6 +81,9 @@ for filename, regex, _ in VERSION_OCCURANCES:
         f.write(res)
         f.truncate()
 
+if UPDATE_LOCKFILE:
+    os.system("uv lock")  # noqa: S605, S607
+
 if has_wanings:
     print("WARNING: there were warnings, please check the output before contiuning")
     input("Press enter to continue")
@@ -86,6 +91,8 @@ if has_wanings:
 res = input("Do you want to commit the changes? [y/N] ")
 if res.lower() in {"y", "yes"}:
     repo.git.add(*{filename for filename, _, _ in VERSION_OCCURANCES})
+    if UPDATE_LOCKFILE:
+        repo.git.add("uv.lock")
     repo.git.commit("-m", f"Bump version to {next_version}")
     repo.create_tag(f"v{next_version}", message=f"Bump version to {next_version}")
     print("changes committed and created tag")
