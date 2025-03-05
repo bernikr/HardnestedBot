@@ -31,7 +31,7 @@ WHITELISTED_CHAT_IDS = [int(chat_id) for chat_id in os.getenv("WHITELISTED_CHAT_
 WEBHOOK_URL = os.getenv("WEBHOOK_URL")
 WEBHOOK_PORT = int(os.getenv("WEBHOOK_PORT", "8080"))
 
-VERSION = "0.2.0"
+VERSION = "0.2.1"
 
 
 @dataclass

@@ -1,6 +1,6 @@
 [project]
 name = "hardnestedbot"
-version = "0.2.0"
+version = "0.2.1"
 description = "Telegram bot for Flipper Hardnested Recovery on the go "
 readme = "README.md"
 requires-python = ">=3.13"
