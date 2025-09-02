@@ -20,8 +20,9 @@ COPY . /app
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --locked --no-dev --no-editable
 
-FROM python:3.13-slim-bookworm
+FROM python:3.13-slim-bookworm AS hardnested-builder
 SHELL ["sh", "-exc"]
+WORKDIR /app
 
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
@@ -38,7 +39,11 @@ make
 cd ..
 EOT
 
+FROM python:3.13-slim-bookworm
+SHELL ["sh", "-exc"]
+
 COPY --from=builder --chown=app:app /app /app
+COPY --from=hardnested-builder --chown=app:app /app/HardnestedRecovery /app/HardnestedRecovery
 ENV PATH="/app/.venv/bin:$PATH"
 
 WORKDIR /app
