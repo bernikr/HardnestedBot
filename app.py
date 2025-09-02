@@ -30,8 +30,7 @@ TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN", "")
 WHITELISTED_CHAT_IDS = [int(chat_id) for chat_id in os.getenv("WHITELISTED_CHAT_IDS", "0").split(",")]
 WEBHOOK_URL = os.getenv("WEBHOOK_URL")
 WEBHOOK_PORT = int(os.getenv("WEBHOOK_PORT", "8080"))
-
-VERSION = "0.2.1"
+VERSION = os.getenv("VERSION", "dev")
 
 
 @dataclass

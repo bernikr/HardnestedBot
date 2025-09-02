@@ -47,4 +47,7 @@ COPY --from=hardnested-builder --chown=app:app /app/HardnestedRecovery /app/Hard
 ENV PATH="/app/.venv/bin:$PATH"
 
 WORKDIR /app
+ARG VERSION
+ENV VERSION=${VERSION:-"unspecified"}
+EXPOSE 8080
 CMD ["python", "app.py"]
