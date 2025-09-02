@@ -13,7 +13,7 @@ from tempfile import NamedTemporaryFile
 from typing import Any
 
 import anyio
-from telegram import Bot, InlineKeyboardButton, InlineKeyboardMarkup, Update
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.constants import ParseMode
 from telegram.ext import (
     ApplicationBuilder,
@@ -32,6 +32,8 @@ WHITELISTED_CHAT_IDS = [int(chat_id) for chat_id in os.getenv("WHITELISTED_CHAT_
 WEBHOOK_URL = os.getenv("WEBHOOK_URL")
 WEBHOOK_PORT = int(os.getenv("WEBHOOK_PORT", "8080"))
 VERSION = os.getenv("VERSION", "dev")
+
+RESULT_PATTERN = re.compile(r"Key found for UID: [0-9a-f]+, Sector: \d+, Key type: [AB]: ([0-9a-f]+)")
 
 
 @dataclass
@@ -144,27 +146,25 @@ async def button(update: Update, context: Context) -> None:
 
     context.chat_data.running.add(cuid)
     try:
-        keys = await run_hardnested(cuid, context.chat_data.logs[cuid], update.effective_chat.id, context.bot)
+        await run_hardnested(cuid, update.effective_chat.id, context)
     finally:
         context.chat_data.running.remove(cuid)
-    if keys:
-        context.chat_data.keys[cuid] |= keys
-        await context.bot.send_message(
-            text=f"```\n{'\n'.join(k.upper() for k in keys)}\n```",
-            chat_id=update.effective_chat.id,
-            parse_mode=ParseMode.MARKDOWN,
-        )
-    else:
-        await context.bot.send_message(
-            text="No new keys found",
-            chat_id=update.effective_chat.id,
-        )
 
 
-async def run_hardnested(cuid: str, logs: set[str], chat_id: int, bot: Bot) -> set[str]:
+async def run_hardnested(cuid: str, chat_id: int, context: Context) -> None:
+    assert context.chat_data  # noqa: S101
+
+    bot = context.bot
     msg = await bot.send_message(chat_id=chat_id, text="Decoding logs for cuid " + cuid)
+    key_msg = await context.bot.send_message(
+        text=f"Found keys so far: ```\n{'\n'.join(k.upper() for k in context.chat_data.keys[cuid])}\n```"
+        if context.chat_data.keys[cuid]
+        else "No keys found yet",
+        chat_id=chat_id,
+        parse_mode=ParseMode.MARKDOWN,
+    )
     with NamedTemporaryFile(mode="w", delete_on_close=False, encoding="utf-8") as f:
-        for line in sorted(logs):
+        for line in sorted(context.chat_data.logs[cuid]):
             f.write(line + "\n")
         f.flush()
         f.close()
@@ -188,6 +188,11 @@ async def run_hardnested(cuid: str, logs: set[str], chat_id: int, bot: Bot) -> s
                 final = cur_out[:cutoff].rsplit("\n", 1)[0]
                 cur_out = cur_out[len(final) + 1 :]
                 out.append(final)
+
+                keys = set(re.findall(RESULT_PATTERN, final))
+                log.info("Found keys: %s", keys)
+                context.chat_data.keys[cuid] |= keys
+
                 await bot.edit_message_text(
                     text=f"```\n{final}\n```",
                     chat_id=chat_id,
@@ -199,17 +204,33 @@ async def run_hardnested(cuid: str, logs: set[str], chat_id: int, bot: Bot) -> s
                     chat_id=chat_id,
                     parse_mode=ParseMode.MARKDOWN,
                 )
+                await context.bot.send_message(
+                    text="Done!",
+                    chat_id=chat_id,
+                )
+                await bot.delete_message(chat_id, key_msg.message_id)
+                key_msg = await context.bot.send_message(
+                    text=f"```\n{'\n'.join(k.upper() for k in context.chat_data.keys[cuid])}\n```"
+                    if context.chat_data.keys[cuid]
+                    else "No keys found yet",
+                    chat_id=chat_id,
+                    parse_mode=ParseMode.MARKDOWN,
+                )
+
         await bot.edit_message_text(
             text=f"```\n{cur_out}\n```",
             chat_id=chat_id,
             message_id=msg.message_id,
             parse_mode=ParseMode.MARKDOWN,
         )
-        out.append(cur_out)
-        out = "\n".join(out)
-        keys = set(re.findall(r"Key found for UID: [0-9a-f]+, Sector: \d+, Key type: [AB]: ([0-9a-f]+)", out))
-        log.info("Found keys: %s", keys)
-        return keys
+        await bot.delete_message(chat_id, key_msg.message_id)
+        await context.bot.send_message(
+            text=f"```\n{'\n'.join(k.upper() for k in context.chat_data.keys[cuid])}\n```"
+            if context.chat_data.keys[cuid]
+            else "No keys found",
+            chat_id=chat_id,
+            parse_mode=ParseMode.MARKDOWN,
+        )
 
 
 async def run_process(args: str | Sequence[str]) -> AsyncIterator[str]:
