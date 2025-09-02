@@ -10,6 +10,7 @@ from collections.abc import AsyncIterator, Sequence
 from dataclasses import dataclass, field
 from functools import partial
 from tempfile import NamedTemporaryFile
+from typing import Any
 
 import anyio
 from telegram import Bot, InlineKeyboardButton, InlineKeyboardMarkup, Update
@@ -40,7 +41,7 @@ class ChatData:
     running: set[str] = field(default_factory=set)
 
 
-type Context = CallbackContext[ExtBot, dict, ChatData, dict]
+type Context = CallbackContext[ExtBot[None], dict[str, Any], ChatData, dict[str, Any]]
 
 
 class TokenRemoverFormatter(logging.Formatter):
@@ -215,7 +216,7 @@ async def run_process(args: str | Sequence[str]) -> AsyncIterator[str]:
     # this section uses really hacky file descriptor stuff to get the live preview working
     # for some reason normal pipes don't work with the hardnested utility
     # only works on unix, errors out on windows (run in docker)
-    mo, so = os.openpty()  # pyright: ignore[reportAttributeAccessIssue]
+    mo, so = os.openpty()  # type: ignore[attr-defined]
     os.set_blocking(mo, False)
     proc = await anyio.open_process(
         args,

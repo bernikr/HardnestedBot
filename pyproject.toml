@@ -7,7 +7,13 @@ requires-python = ">=3.13"
 dependencies = ["anyio>=4.7.0", "python-telegram-bot[ext]>=21.9"]
 
 [tool.uv]
-dev-dependencies = ["gitpython>=3.1.44", "ruff>=0.8.3", "semver>=3.0.4"]
+dev-dependencies = [
+    "gitpython>=3.1.44",
+    "mypy>=1.17.1",
+    "pre-commit>=4.3.0",
+    "ruff>=0.8.3",
+    "semver>=3.0.4",
+]
 
 [tool.ruff]
 line-length = 120
@@ -19,3 +25,8 @@ ignore = [
     "D",   # pydocstyle
     "CPY", # flake8-copyright
 ]
+
+[tool.mypy]
+strict = true
+local_partial_types = true
+allow_redefinition_new = true
