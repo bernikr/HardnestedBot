@@ -2,5 +2,5 @@ services:
   hardnestedbot:
     build: .
     volumes:
-      - ./data:/app/persistence
+      - ./data:/app/data
     env_file: .env
