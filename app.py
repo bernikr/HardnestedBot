@@ -6,7 +6,7 @@ import os
 import re
 import secrets
 from collections import defaultdict
-from collections.abc import AsyncIterator, Sequence
+from collections.abc import AsyncIterator, Callable, Coroutine, Sequence
 from dataclasses import dataclass, field
 from functools import partial
 from tempfile import NamedTemporaryFile
@@ -17,6 +17,7 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.constants import ParseMode
 from telegram.ext import (
     ApplicationBuilder,
+    BaseHandler,
     CallbackContext,
     CallbackQueryHandler,
     CommandHandler,
@@ -64,7 +65,27 @@ log = logging.getLogger(__name__)
 for handler in logging.root.handlers:
     handler.setFormatter(TokenRemoverFormatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s"))
 
+_handlers: list[BaseHandler[Update, Context, None]] = []
 
+HandlerCallback = Callable[[Update, Context], Coroutine[Any, Any, None]]
+
+
+def add_handler(
+    handler: type[BaseHandler[Update, Context, None]],
+    **kwargs: Any,  # noqa: ANN401
+) -> Callable[[HandlerCallback], HandlerCallback]:
+    def decorator(func: HandlerCallback) -> HandlerCallback:
+        _handlers.append(handler(callback=func, **kwargs))
+        return func
+
+    return decorator
+
+
+def add_cmd_handler(cmd: str) -> Callable[[HandlerCallback], HandlerCallback]:
+    return add_handler(CommandHandler, command=cmd)
+
+
+@add_cmd_handler("start")
 async def start(update: Update, context: Context) -> None:
     assert update.effective_chat  # noqa: S101
 
@@ -77,6 +98,7 @@ async def start(update: Update, context: Context) -> None:
         await context.bot.send_message(chat_id=update.effective_chat.id, text="Hello, I am HardnestedBot")
 
 
+@add_cmd_handler("reset")
 async def reset(update: Update, context: Context) -> None:
     assert context.chat_data  # noqa: S101
     assert update.effective_chat  # noqa: S101
@@ -86,6 +108,7 @@ async def reset(update: Update, context: Context) -> None:
     await context.bot.send_message(chat_id=update.effective_chat.id, text="Reset chat data")
 
 
+@add_handler(MessageHandler, filters=filters.Document.FileExtension("log") & filters.Chat(WHITELISTED_CHAT_IDS))
 async def new_file(update: Update, context: Context) -> None:
     assert update.message  # noqa: S101
     assert update.message.document  # noqa: S101
@@ -107,6 +130,7 @@ async def new_file(update: Update, context: Context) -> None:
     )
 
 
+@add_handler(CallbackQueryHandler, block=True)
 async def button(update: Update, context: Context) -> None:
     assert update.callback_query  # noqa: S101
     assert update.callback_query.data  # noqa: S101
@@ -263,6 +287,7 @@ async def run_process(args: str | Sequence[str]) -> AsyncIterator[str]:
     log.info("external process finished with exit code %s", exit_code)
 
 
+@add_cmd_handler("keys")
 async def all_keys(update: Update, context: Context) -> None:
     assert context.chat_data  # noqa: S101
     assert update.effective_chat  # noqa: S101
@@ -286,13 +311,7 @@ if __name__ == "__main__":
         .build()
     )
 
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("reset", reset))
-    app.add_handler(CommandHandler("keys", all_keys))
-    app.add_handler(
-        MessageHandler(filters.Document.FileExtension("log") & filters.Chat(WHITELISTED_CHAT_IDS), new_file),
-    )
-    app.add_handler(CallbackQueryHandler(button, block=True))
+    app.add_handlers(_handlers)
 
     if WEBHOOK_URL:
         app.run_webhook(
