@@ -1,0 +1,15 @@
+name: autofix.ci
+
+on:
+  pull_request:
+  push:
+
+jobs:
+  pre-commit:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - uses: actions/setup-python@v3
+    - uses: pre-commit/action@v3.0.1
+    - uses: autofix-ci/action@635ffb0c9798bd160680f18fd73371e355b85f27
+      if: failure()
