@@ -19,7 +19,7 @@ repos:
       - id: mypy
         name: mypy
         language: python
-        entry: uv run mypy .
+        entry: uv --no-progress run mypy .
         additional_dependencies: ["uv"]
         types: [python]
         pass_filenames: false
