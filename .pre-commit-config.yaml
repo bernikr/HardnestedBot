@@ -9,7 +9,7 @@ repos:
       - id: check-yaml
       - id: check-toml
   - repo: https://github.com/bernikr/pre-commit-ruff-version-sync
-    rev: v0.1.1
+    rev: v0.1.2
     hooks:
       - id: ruff-version-sync
   - repo: https://github.com/astral-sh/ruff-pre-commit
