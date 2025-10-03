@@ -8,8 +8,12 @@ repos:
       - id: check-added-large-files
       - id: check-yaml
       - id: check-toml
+  - repo: https://github.com/bernikr/pre-commit-ruff-version-sync
+    rev: v0.1.1
+    hooks:
+      - id: ruff-version-sync
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.12.9
+    rev: v0.12.11
     hooks:
       - id: ruff-check
         args: [--fix]
