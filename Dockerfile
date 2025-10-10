@@ -1,4 +1,4 @@
-FROM ghcr.io/astral-sh/uv:python3.13-bookworm-slim AS builder
+FROM ghcr.io/astral-sh/uv:python3.13-bookworm-slim AS env-builder
 SHELL ["sh", "-exc"]
 
 ENV UV_COMPILE_BYTECODE=1 \ 
@@ -15,6 +15,8 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     --mount=type=bind,source=uv.lock,target=uv.lock \
     --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
     uv sync --locked --no-install-project --no-dev
+
+FROM env-builder AS app-builder
 
 COPY . /app
 RUN --mount=type=cache,target=/root/.cache/uv \
@@ -42,7 +44,8 @@ EOT
 FROM python:3.13-slim-bookworm
 SHELL ["sh", "-exc"]
 
-COPY --from=builder --chown=app:app /app /app
+COPY --from=env-builder --chown=app:app /app /app
+COPY --from=app-builder --chown=app:app /app /app
 COPY --from=hardnested-builder --chown=app:app /app/HardnestedRecovery /app/HardnestedRecovery
 ENV PATH="/app/.venv/bin:$PATH"
 

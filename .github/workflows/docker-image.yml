@@ -42,21 +42,6 @@ jobs:
       - name: Set short SHA
         id: vars
         run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
-      
-      - uses: actions/cache@v4
-        id: cache
-        with:
-          path: cache-mount
-          key: uv-cache-${{ hashFiles('uv.lock') }}
-          restore-keys: |
-            uv-cache-
-
-      - uses: reproducible-containers/buildkit-cache-dance@v3
-        with:
-          builder: ${{ steps.setup-buildx.outputs.name }}
-          cache-dir: cache-mount
-          dockerfile: Dockerfile
-          skip-extraction: ${{ steps.cache.outputs.cache-hit }}
 
       - uses: docker/build-push-action@f2a1d5e99d037542a71f64918e516c093c6f3fc4
         id: push
