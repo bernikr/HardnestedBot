@@ -6,11 +6,11 @@ readme = "README.md"
 requires-python = ">=3.13"
 dependencies = ["anyio>=4.7.0", "python-telegram-bot[ext]>=21.9"]
 
-[tool.uv]
-dev-dependencies = [
+[dependency-groups]
+dev = [
     "gitpython>=3.1.44",
     "mypy>=1.17.1",
-    "pre-commit>=4.3.0",
+    "prek>=0.3.1",
     "ruff>=0.8.3",
     "semver>=3.0.4",
 ]

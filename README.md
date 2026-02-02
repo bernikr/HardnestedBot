@@ -15,7 +15,7 @@ services:
     environment:
       TELEGRAM_TOKEN: <your telegram token>
       WHITELISTED_CHAT_IDS: <your telegram chat id>
-  
+
 volumes:
   data:
 ```
