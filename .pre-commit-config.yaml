@@ -12,6 +12,11 @@ repos:
       - id: check-executables-have-shebangs
       - id: check-merge-conflict
       - id: detect-private-key
+  - repo: https://github.com/ComPWA/taplo-pre-commit
+    rev: v0.9.3
+    hooks:
+      - id: taplo-format
+        args: [--option, column_width=20]
   - repo: https://github.com/bernikr/pre-commit-ruff-version-sync
     rev: v0.1.2
     hooks:
