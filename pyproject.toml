@@ -13,8 +13,8 @@ dependencies = [
 dev = [
   "gitpython>=3.1.46",
   "mypy>=1.19.1",
-  "prek>=0.3.1",
-  "ruff>=0.14.14",
+  "prek>=0.3.3",
+  "ruff>=0.15.1",
   "semver>=3.0.4",
 ]
 
