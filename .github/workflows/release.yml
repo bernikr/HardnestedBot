@@ -1,0 +1,142 @@
+name: Release Manager
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump_type:
+        description: "Select Release Type"
+        required: true
+        default: "patch"
+        type: choice
+        options:
+          - patch # 1.0.0 -> 1.0.1 OR 1.0.1-beta.1 -> 1.0.1 (Graduate)
+          - minor # 1.0.0 -> 1.1.0
+          - major # 1.0.0 -> 2.0.0
+          - beta # 1.0.0 -> 1.0.1-beta.1 OR 1.0.1-beta.1 -> 1.0.1-beta.2
+
+jobs:
+  bump-and-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      new_tag: ${{ steps.calc.outputs.new_tag }}
+      new_version: ${{ steps.calc.outputs.new_version }}
+    steps:
+      - name: Fail if branch is not main
+        if: github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/main'
+        run: |
+          echo "This workflow should not be triggered with workflow_dispatch on a branch other than main"
+          exit 1
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "latest"
+
+      - name: Calculate Next Version
+        id: calc
+        shell: bash
+        run: |
+          # 1. Find the latest tag. Default to v0.0.0 if none exists.
+          LAST_TAG=$(git tag --sort=-v:refname | head -n 1)
+          if [ -z "$LAST_TAG" ]; then LAST_TAG="v0.0.0"; fi
+
+          # Remove 'v'
+          VERSION=${LAST_TAG#v}
+
+          # 2. Parse Version using Regex
+          # Groups: 1=Major, 2=Minor, 3=Patch, 4=Suffix(-beta.x), 5=BetaNum
+          REGEX="^([0-9]+)\.([0-9]+)\.([0-9]+)(-beta\.([0-9]+))?$"
+
+          if [[ $VERSION =~ $REGEX ]]; then
+            MAJOR="${BASH_REMATCH[1]}"
+            MINOR="${BASH_REMATCH[2]}"
+            PATCH="${BASH_REMATCH[3]}"
+            SUFFIX="${BASH_REMATCH[4]}"
+            BETA_NUM="${BASH_REMATCH[5]}"
+          else
+            echo "Error: Tag $LAST_TAG does not match semver format"
+            exit 1
+          fi
+
+          echo "Current: $MAJOR.$MINOR.$PATCH (Beta: ${BETA_NUM:-0})"
+          INPUT_TYPE="${{ inputs.bump_type }}"
+
+          # 3. Calculate New Version
+          if [ "$INPUT_TYPE" == "major" ]; then
+            MAJOR=$((MAJOR + 1)); MINOR=0; PATCH=0; SUFFIX=""
+
+          elif [ "$INPUT_TYPE" == "minor" ]; then
+            MINOR=$((MINOR + 1)); PATCH=0; SUFFIX=""
+
+          elif [ "$INPUT_TYPE" == "patch" ]; then
+            if [ -n "$SUFFIX" ]; then
+              # If we are in beta (1.0.1-beta.1), patch means "Graduate to Stable" (1.0.1)
+              SUFFIX=""
+            else
+              # If stable, standard patch bump
+              PATCH=$((PATCH + 1))
+            fi
+
+          elif [ "$INPUT_TYPE" == "beta" ]; then
+            if [ -n "$SUFFIX" ]; then
+              # Already beta: increment beta number
+              BETA_NUM=$((BETA_NUM + 1))
+              SUFFIX="-beta.$BETA_NUM"
+            else
+              # Currently stable: Bump Patch and start Beta 1
+              PATCH=$((PATCH + 1))
+              SUFFIX="-beta.1"
+            fi
+          fi
+
+          NEW_VERSION="$MAJOR.$MINOR.$PATCH$SUFFIX"
+          NEW_TAG="v$NEW_VERSION"
+
+          echo "Next Version: $NEW_VERSION"
+
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "new_tag=$NEW_TAG" >> $GITHUB_OUTPUT
+
+      - name: Update Files
+        run: |
+          NEW_VERSION="${{ steps.calc.outputs.new_version }}"
+
+          echo "Updating version to $NEW_VERSION..."
+
+          # A. Update pyproject.toml
+          sed -i "s/^version = \".*\"/version = \"$NEW_VERSION\"/" pyproject.toml
+
+          # B. Update README.md
+          sed -E -i "s/ghcr.io\/bernikr\/hardnestedbot:[0-9]+\.[0-9]+\.[0-9]+(-beta\.[0-9]+)?/ghcr.io\/bernikr\/hardnestedbot:$NEW_VERSION/g" README.md
+
+          # C. Update uv.lock
+          uv lock
+
+      - name: Commit, Tag, and Push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add pyproject.toml uv.lock README.md
+          git commit -m "chore(release): bump version to ${{ steps.calc.outputs.new_version }}"
+          git push origin main
+          git tag ${{ steps.calc.outputs.new_tag }}
+          git push origin ${{ steps.calc.outputs.new_tag }}
+
+  call-build:
+    needs: bump-and-release
+    uses: ./.github/workflows/docker-image.yml
+    permissions:
+      contents: read
+      packages: write
+      attestations: write
+      id-token: write
+    with:
+      version: ${{ needs.bump-and-release.outputs.new_tag }}
