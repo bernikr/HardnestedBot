@@ -8,7 +8,7 @@ Using docker compose:
 ```yaml
 services:
   hardnestedbot:
-    image: ghcr.io/bernikr/hardnestedbot:0.3.4
+    image: ghcr.io/bernikr/hardnestedbot:0.3.5
     restart: always
     volumes:
       - data:/app/data
