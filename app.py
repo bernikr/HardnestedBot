@@ -72,7 +72,7 @@ HandlerCallback = Callable[[Update, Context], Coroutine[Any, Any, None]]
 
 def add_handler(
     handler: type[BaseHandler[Update, Context, None]],
-    **kwargs: Any,  # noqa: ANN401
+    **kwargs: Any,  # ruff: ignore[any-type]
 ) -> Callable[[HandlerCallback], HandlerCallback]:
     def decorator(func: HandlerCallback) -> HandlerCallback:
         _handlers.append(handler(callback=func, **kwargs))
@@ -87,7 +87,7 @@ def add_cmd_handler(cmd: str) -> Callable[[HandlerCallback], HandlerCallback]:
 
 @add_cmd_handler("start")
 async def start(update: Update, context: Context) -> None:
-    assert update.effective_chat  # noqa: S101
+    assert update.effective_chat  # ruff: ignore[assert]
 
     if update.effective_chat.id not in WHITELISTED_CHAT_IDS:
         await context.bot.send_message(
@@ -100,8 +100,8 @@ async def start(update: Update, context: Context) -> None:
 
 @add_cmd_handler("reset")
 async def reset(update: Update, context: Context) -> None:
-    assert context.chat_data  # noqa: S101
-    assert update.effective_chat  # noqa: S101
+    assert context.chat_data  # ruff: ignore[assert]
+    assert update.effective_chat  # ruff: ignore[assert]
 
     for k in dataclasses.fields(context.chat_data):
         setattr(context.chat_data, k.name, k.default_factory() if callable(k.default_factory) else k.default)
@@ -110,9 +110,9 @@ async def reset(update: Update, context: Context) -> None:
 
 @add_handler(MessageHandler, filters=filters.Document.FileExtension("log") & filters.Chat(WHITELISTED_CHAT_IDS))
 async def new_file(update: Update, context: Context) -> None:
-    assert update.message  # noqa: S101
-    assert update.message.document  # noqa: S101
-    assert context.chat_data  # noqa: S101
+    assert update.message  # ruff: ignore[assert]
+    assert update.message.document  # ruff: ignore[assert]
+    assert context.chat_data  # ruff: ignore[assert]
 
     file = await context.bot.get_file(update.message.document)
     content = await file.download_as_bytearray()
@@ -132,10 +132,10 @@ async def new_file(update: Update, context: Context) -> None:
 
 @add_handler(CallbackQueryHandler, block=True)
 async def button(update: Update, context: Context) -> None:
-    assert update.callback_query  # noqa: S101
-    assert update.callback_query.data  # noqa: S101
-    assert context.chat_data  # noqa: S101
-    assert update.effective_chat  # noqa: S101
+    assert update.callback_query  # ruff: ignore[assert]
+    assert update.callback_query.data  # ruff: ignore[assert]
+    assert context.chat_data  # ruff: ignore[assert]
+    assert update.effective_chat  # ruff: ignore[assert]
 
     await update.callback_query.answer()
     cuid = update.callback_query.data
@@ -176,7 +176,7 @@ async def button(update: Update, context: Context) -> None:
 
 
 async def run_hardnested(cuid: str, chat_id: int, context: Context) -> None:
-    assert context.chat_data  # noqa: S101
+    assert context.chat_data  # ruff: ignore[assert]
 
     bot = context.bot
     msg = await bot.send_message(chat_id=chat_id, text="Decoding logs for cuid " + cuid)
@@ -289,8 +289,8 @@ async def run_process(args: str | Sequence[str]) -> AsyncIterator[str]:
 
 @add_cmd_handler("keys")
 async def all_keys(update: Update, context: Context) -> None:
-    assert context.chat_data  # noqa: S101
-    assert update.effective_chat  # noqa: S101
+    assert context.chat_data  # ruff: ignore[assert]
+    assert update.effective_chat  # ruff: ignore[assert]
 
     keys = {k for ks in context.chat_data.keys.values() for k in ks}
     await context.bot.send_message(
@@ -317,7 +317,7 @@ if __name__ == "__main__":
         app.run_webhook(
             webhook_url=WEBHOOK_URL,
             port=WEBHOOK_PORT,
-            listen="0.0.0.0",  # noqa: S104
+            listen="0.0.0.0",  # ruff: ignore[hardcoded-bind-all-interfaces]
             secret_token=secrets.token_urlsafe(),
         )
     else:

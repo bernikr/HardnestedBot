@@ -5,15 +5,15 @@ description = "Telegram bot for Flipper Hardnested Recovery on the go "
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
-  "anyio>=4.14.0",
+  "anyio>=4.15.1",
   "python-telegram-bot[ext]>=22.8",
 ]
 
 [dependency-groups]
 dev = [
-  "mypy>=2.1.0",
-  "prek>=0.4.5",
-  "ruff>=0.15.18",
+  "mypy>=2.3.1",
+  "prek>=0.5.3",
+  "ruff>=0.16.8",
 ]
 
 [tool.ruff]
