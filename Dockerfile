@@ -44,8 +44,8 @@ EOT
 FROM gcr.io/distroless/cc-debian13:latest AS runtime
 
 COPY --from=app-builder /python /python
-COPY --from=app-builder /app /app
-COPY --from=hardnested-builder /app/HardnestedRecovery /app/HardnestedRecovery
+COPY --from=app-builder --chown=65532:65532 /app /app
+COPY --from=hardnested-builder --chown=65532:65532 /app/HardnestedRecovery /app/HardnestedRecovery
 ENV PATH="/app/.venv/bin:$PATH"
 
 USER 65532:65532
