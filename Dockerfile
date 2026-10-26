@@ -33,7 +33,7 @@ apt-get update -q
 apt-get install -qqy \
     -o APT::Install-Recommends=false \
     -o APT::Install-Suggests=false \
-    build-essential liblzma-dev git
+    ca-certificates build-essential liblzma-dev git
 
 git clone https://github.com/noproto/HardnestedRecovery.git
 cd HardnestedRecovery
