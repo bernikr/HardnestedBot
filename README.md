@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2024 bernikr <hi@berni.kr>
+
+SPDX-License-Identifier: MIT
+-->
+
 # Hardnested Bot
 Telegram wrapper for [HardnestedRecovery](https://github.com/noproto/HardnestedRecovery) attacks on the go
 
