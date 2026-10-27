@@ -48,6 +48,7 @@ jobs:
         shell: bash
         run: |
           # 1. Find the latest tag. Default to v0.0.0 if none exists.
+          git config versionsort.suffix "-beta"
           LAST_TAG=$(git tag --sort=-v:refname | head -n 1)
           if [ -z "$LAST_TAG" ]; then LAST_TAG="v0.0.0"; fi
 
