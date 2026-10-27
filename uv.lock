@@ -113,7 +113,7 @@ version = "0.3.10"
 source = { virtual = "." }
 dependencies = [
     { name = "anyio" },
-    { name = "python-telegram-bot", extra = ["ext"] },
+    { name = "python-telegram-bot", extra = ["ext", "job-queue"] },
 ]
 
 [package.dev-dependencies]
@@ -126,7 +126,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "anyio", specifier = ">=4.15.1" },
-    { name = "python-telegram-bot", extras = ["ext"], specifier = ">=22.8" },
+    { name = "python-telegram-bot", extras = ["ext", "job-queue"], specifier = ">=22.8" },
 ]
 
 [package.metadata.requires-dev]
@@ -272,6 +272,9 @@ ext = [
     { name = "apscheduler" },
     { name = "cachetools" },
     { name = "tornado" },
+]
+job-queue = [
+    { name = "apscheduler" },
 ]
 
 [[package]]

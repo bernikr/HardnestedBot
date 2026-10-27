@@ -9,6 +9,7 @@ import logging
 import os
 import re
 import secrets
+import time
 from collections import defaultdict
 from collections.abc import AsyncIterator, Callable, Coroutine, Sequence
 from dataclasses import dataclass, field
@@ -17,6 +18,7 @@ from tempfile import NamedTemporaryFile
 from typing import Any
 
 import anyio
+from anyio import Path
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.constants import ParseMode
 from telegram.ext import (
@@ -36,7 +38,9 @@ TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN", "")
 WHITELISTED_CHAT_IDS = [int(chat_id) for chat_id in os.getenv("WHITELISTED_CHAT_IDS", "0").split(",")]
 WEBHOOK_URL = os.getenv("WEBHOOK_URL")
 WEBHOOK_PORT = int(os.getenv("WEBHOOK_PORT", "8080"))
-VERSION = os.getenv("VERSION", "dev")
+
+VERSION = os.getenv("VERSION", "unspecified")
+HEALTHCHECK_FILE: Path | None = Path(os.environ["HEALTHCHECK_FILE"]) if "HEALTHCHECK_FILE" in os.environ else None
 
 RESULT_PATTERN = re.compile(r"Key found for UID: [0-9a-f]+, Sector: \d+, Key type: [AB]: ([0-9a-f]+)")
 
@@ -304,6 +308,11 @@ async def all_keys(update: Update, context: Context) -> None:
     )
 
 
+async def healthcheck(context: Context) -> None:  # ruff: ignore[unused-function-argument]
+    if HEALTHCHECK_FILE:
+        await HEALTHCHECK_FILE.write_text(str(time.time()))
+
+
 if __name__ == "__main__":
     log.info("HardnestedBot version %s", VERSION)
 
@@ -316,6 +325,13 @@ if __name__ == "__main__":
     )
 
     app.add_handlers(_handlers)
+
+    if HEALTHCHECK_FILE and app.job_queue:
+        app.job_queue.run_repeating(
+            callback=healthcheck,
+            interval=30,  # Run every 10 seconds
+            first=1,
+        )
 
     if WEBHOOK_URL:
         app.run_webhook(

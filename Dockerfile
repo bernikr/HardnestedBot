@@ -53,4 +53,6 @@ WORKDIR /app
 ARG VERSION
 ENV VERSION=${VERSION:-"unspecified"}
 EXPOSE 8080
+ENV HEALTHCHECK_FILE=/tmp/health
+HEALTHCHECK --start-period=30s CMD ["python", "-c", "import os, sys, time; p = os.getenv('HEALTHCHECK_FILE'); sys.exit(0 if os.path.isfile(p) and (time.time() - os.path.getmtime(p) <= 60) else 1)"]
 CMD ["python", "app.py"]
