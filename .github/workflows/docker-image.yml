@@ -6,7 +6,6 @@ name: Build Docker Image
 
 on:
   push:
-  pull_request:
   workflow_call:
     inputs:
       version:
